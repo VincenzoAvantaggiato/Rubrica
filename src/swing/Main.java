@@ -7,6 +7,8 @@ import contatti.ContactsList;
 public class Main {
 
 	public static void main(String[] args) {
+		String username = args.length > 0 ? args[0] : "admin";
+		
 		JFrame frame = new JFrame("Rubrica");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(400, 300);
@@ -14,11 +16,11 @@ public class Main {
 		
 		try {
 		    File jarDir = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
-		    File file = new File(jarDir, "informazioni.txt");
-		    rubrica = new ContactsList(file.getAbsolutePath());
+		    File file = new File(jarDir, "credenziali_database.properties");
+		    rubrica = new ContactsList(file.getAbsolutePath(), username);
 		} catch (Exception ex) {
 		    ex.printStackTrace();
-		    JOptionPane.showMessageDialog(frame, "Errore nell'accesso al file delle informazioni.");
+		    JOptionPane.showMessageDialog(frame, "Errore nell'accesso al db.");
 		    return;
 		  
 		}
@@ -28,12 +30,15 @@ public class Main {
 		JScrollPane scrollPane = new JScrollPane(table);
 		frame.getContentPane().add(scrollPane);
 		
-		JButton newButton = new JButton("Nuovo");
+		ImageIcon addContactIcon = new ImageIcon(Main.class.getResource("/resources/person_add_24dp_000000_FILL0_wght400_GRAD0_opsz24.png"));
+		JButton newButton = new JButton(addContactIcon);
 		newButton.addActionListener(e -> {
 			rubrica.deselectContact();
 			new PersonEditor("Nuovo contatto", rubrica);
 		});
-		JButton editButton = new JButton("Modifica");
+		
+		ImageIcon editContactIcon = new ImageIcon(Main.class.getResource("/resources/person_edit_24dp_000000_FILL0_wght400_GRAD0_opsz24.png"));
+		JButton editButton = new JButton(editContactIcon);
 		editButton.addActionListener(e -> {
 			if (table.getSelectedRow() == -1) {
 				JOptionPane.showMessageDialog(frame, "Devi prima selezionare un contatto da modificare.");
@@ -43,7 +48,8 @@ public class Main {
 			
 		});
 		
-		JButton deleteButton = new JButton("Elimina");
+		ImageIcon deleteContactIcon = new ImageIcon(Main.class.getResource("/resources/person_remove_24dp_000000_FILL0_wght400_GRAD0_opsz24.png"));
+		JButton deleteButton = new JButton(deleteContactIcon);
 		deleteButton.addActionListener(e -> {
 			if (table.getSelectedRow() == -1) {
 				JOptionPane.showMessageDialog(frame, "Devi prima selezionare un contatto da eliminare.");
@@ -55,11 +61,11 @@ public class Main {
 				rubrica.removeContact(rubrica.getSelectedContact());
 			}
 		});
-		JPanel buttonPanel = new JPanel();
+		JToolBar buttonPanel = new JToolBar();
 		buttonPanel.add(newButton);
 		buttonPanel.add(editButton);
 		buttonPanel.add(deleteButton);
-		frame.getContentPane().add(buttonPanel, "South");
+		frame.getContentPane().add(buttonPanel, "North");
 		
 		
 		

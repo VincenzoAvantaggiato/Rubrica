@@ -5,14 +5,16 @@ public class Person {
 	private String surname;
 	private String address;
 	private String phone_no;
+	private int id;
 	private int age;
 	
-	public Person(String name, String surname, String address, String phone_no, int age) {
+	public Person(String name, String surname, String address, String phone_no, int age, int id) {
 		this.name = name;
 		this.surname = surname;
 		this.address = address;
 		this.phone_no = phone_no;
 		this.age = age;
+		this.id = id;
 	}
 	
 	public String getName() {
@@ -29,6 +31,12 @@ public class Person {
 	}
 	public int getAge() {
 		return age;
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
 	}
 	
 }

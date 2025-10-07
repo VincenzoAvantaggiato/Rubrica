@@ -6,6 +6,11 @@ import java.util.Scanner;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+import db.Database;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 
 public class ContactsList {
@@ -14,15 +19,34 @@ public class ContactsList {
 	private String filepath;
 	private ContactsTableModel model;
 	private JTable table;
+	private Database database;
+	private Connection dbConnection;
+	private String owner;
 	
-	public ContactsList(String filepath) {
+	public ContactsList(String filepath, String owner) {
 		this.filepath = filepath;
 		this.model = new ContactsTableModel();
 		this.contacts = new LinkedList<Person>();
 		this.table = new JTable();
+		this.owner = owner;
 		table.setModel(model);
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		readFromFile();
+		try {
+			database = new Database(filepath, "rubrica");
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		try {
+			dbConnection = database.connect();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
+		}
+		readFromDB();
 	}
 	
 	private class ContactsTableModel extends DefaultTableModel {
@@ -70,58 +94,121 @@ public class ContactsList {
 	
 	public void addContact(Person p) {
 		contacts.add(p);
-		saveToFile();
+		int newId =saveContactToDB(p);
+		p.setId(newId);
 		refreshTable();
 	}
 	
 	public void updateContact(Person oldP, Person newP) {
-		int index = contacts.indexOf(oldP);
-		if (index != -1) {
-			contacts.set(index, newP);
-			saveToFile();
-			refreshTable();
-		}
+		newP.setId(oldP.getId());
+		updateContactToDB(newP);
+		contacts.set(contacts.indexOf(oldP), newP);
+		refreshTable();
 	}
 	
 	public void removeContact(Person p) {
 		contacts.remove(p);
-		saveToFile();
+		removeContactFromDB(p);
 		refreshTable();
 	}
 	
-	public void saveToFile() {
+	public int saveContactToDB(Person p) {
 		try {
-			PrintWriter writer = new PrintWriter(new FileWriter(this.filepath));
-			for (Person p : contacts) {
-				writer.println(p.getName() + ";" + p.getSurname() + ";" + p.getAddress() + ";" + p.getPhone_no() + ";" + p.getAge());
+			
+			PreparedStatement insertQuery=dbConnection.prepareStatement("INSERT INTO Contatti (nome, cognome, indirizzo, telefono, eta, owner_username) VALUES (?, ?, ?, ?, ?, ?)");
+			insertQuery.setString(1, p.getName());
+			insertQuery.setString(2, p.getSurname());
+			insertQuery.setString(3, p.getAddress());
+			insertQuery.setString(4, p.getPhone_no());
+			insertQuery.setInt(5, p.getAge());
+			insertQuery.setString(6, owner);
+			insertQuery.executeUpdate();
+			PreparedStatement idQuery=dbConnection.prepareStatement("SELECT LAST_INSERT_ID() AS id");
+			var result=idQuery.executeQuery();
+			if (result.next()) {
+				int id=result.getInt("id");
+				return id;
 			}
-			writer.close();
-		} catch (IOException e) {
-			System.out.println("Error writing to file: " + this.filepath);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return -1;
+		}
+		return -1;
+	}
+	
+	public void updateContactToDB(Person p) {
+		try {
+			PreparedStatement updateQuery=dbConnection.prepareStatement("UPDATE Contatti SET nome=?, cognome=?, indirizzo=?, telefono=?, eta=? WHERE id=? and owner_username=?");
+			updateQuery.setString(1, p.getName());
+			updateQuery.setString(2, p.getSurname());
+			updateQuery.setString(3, p.getAddress());
+			updateQuery.setString(4, p.getPhone_no());
+			updateQuery.setInt(5, p.getAge());
+			updateQuery.setInt(6, p.getId());
+			updateQuery.setString(7, owner);
+			updateQuery.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
 		}
 	}
 	
-	public void readFromFile() {
-		contacts.clear();
+	public void removeContactFromDB(Person p) {
 		try {
-			Scanner scanner = new Scanner(new File(this.filepath));
-			while (scanner.hasNextLine()) {
-				String line = scanner.nextLine();
-				String[] parts = line.split(";");
-				if (parts.length == 5) {
-					String name = parts[0].trim();
-					String surname = parts[1].trim();
-					String address = parts[2].trim();
-					String phone_no = parts[3].trim();
-					int age = Integer.parseInt(parts[4].trim());
-					Person person = new Person(name, surname, address, phone_no, age);
-					contacts.add(person);
-				}
+			PreparedStatement deleteQuery=dbConnection.prepareStatement("DELETE FROM Contatti WHERE id=? and owner_username=?");
+			deleteQuery.setInt(1, p.getId());
+			deleteQuery.setString(2, owner);
+			deleteQuery.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
+		}
+	}
+	
+	public void saveToDB() {
+		try {
+			PreparedStatement deleteQuery=dbConnection.prepareStatement("DELETE FROM Contatti");
+			deleteQuery.executeUpdate();
+			
+			for (Person p : contacts) {
+				PreparedStatement insertQuery=dbConnection.prepareStatement("INSERT INTO Contatti (nome, cognome, indirizzo, telefono, eta, owner_username) VALUES (?, ?, ?, ?, ?, ?)");
+				insertQuery.setString(1, p.getName());
+				insertQuery.setString(2, p.getSurname());
+				insertQuery.setString(3, p.getAddress());
+				insertQuery.setString(4, p.getPhone_no());
+				insertQuery.setInt(5, p.getAge());
+				insertQuery.setString(6, owner);
+				insertQuery.executeUpdate();
 			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
 		}
-		catch (FileNotFoundException e) {
-			System.out.println("File not found: " + this.filepath);
+	}
+	
+	public void readFromDB() {
+		contacts.clear();
+		
+		try {
+			PreparedStatement query=dbConnection.prepareStatement("SELECT * FROM Contatti WHERE owner_username=?");
+			query.setString(1, owner);
+			var result=query.executeQuery();
+			while(result.next()) {
+				String name=result.getString("nome");
+				String surname=result.getString("cognome");
+				String address=result.getString("indirizzo");
+				String phone_no=result.getString("telefono");
+				int age=result.getInt("eta");
+				int id=result.getInt("id");
+				Person person = new Person(name, surname, address, phone_no, age, id);
+				contacts.add(person);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return;
 		}
+		
 	}
 	
 	public JTable getTable() {	
@@ -143,5 +230,7 @@ public class ContactsList {
 	public void deselectContact() {
 		table.clearSelection();
 	}
+	
+	
 	
 }

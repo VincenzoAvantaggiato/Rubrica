@@ -29,9 +29,9 @@ public class PersonEditor {
 	JLabel ageLabel = new JLabel("Età:");
 	JTextField ageField;
 	
-	JPanel buttonPanel = new JPanel();
-	JButton saveButton = new JButton("Salva");
-	JButton cancelButton = new JButton("Annulla");
+	JToolBar buttonPanel = new JToolBar();
+	JButton saveButton = new JButton("Salva 💾");
+	JButton cancelButton = new JButton("Annulla ❌");
 	
 	public PersonEditor(String title, ContactsList contactslist) {
 		this.frame = new JFrame(title);
@@ -47,7 +47,7 @@ public class PersonEditor {
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		frame.setSize(400, 200);
 		
-		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
+		frame.getContentPane();
 		
 		if (selectedContact != null) {
 			nameField.setText(selectedContact.getName());
@@ -113,7 +113,8 @@ public class PersonEditor {
 					surnameField.getText(),
 					addressField.getText(),
 					phoneField.getText(),
-					age
+					age,
+					-1
 					);
 			if (selectedContact == null) {
 				contactslist.addContact(newPerson);
@@ -128,7 +129,7 @@ public class PersonEditor {
 		
 		buttonPanel.add(saveButton);
 		buttonPanel.add(cancelButton);
-		frame.getContentPane().add(buttonPanel);
+		frame.getContentPane().add(buttonPanel, "North");
 		
 	
 		
